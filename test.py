@@ -113,17 +113,19 @@ Return a list
 """
 def sort_ngrams(ngrams):
     list_ngrams = []
-    for k, item in ngrams:
+    for k in ngrams:
+        item = ngrams[k]
         list_ngrams.append(item)
-    res = sorted(list_ngrams, key=lambda ngram: ngrams.occu_tot)
+    res = sorted(list_ngrams, key=lambda ngram: ngram.tf_idf)
     return res
 
 """
 Print the nb first ngrams.
 """
 def print_ngrams(nb, ngrams):
+    print("The most significant ngrams are: ")
     for i in range(nb):
-        print(ngrams[i])
+        print(' '.join(ngrams[i].mot))
 
 def main(argv):
     if argv['ngram_degree'] == None:
