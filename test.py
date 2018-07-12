@@ -7,6 +7,8 @@ import re
 import sys
 from ngram import Ngram
 import numpy as np
+import argparse
+import os.path
 
 # taken from stackoverflow.com/questions/26494211/extracting-text-from-file-using-pdfminer-in-python
 def convert_pdf_to_txt(path):
@@ -51,12 +53,23 @@ def make_ngram(ngrams, splited, n, n_doc):
         if len(tmp) == n:
             key = ' '.join(tmp)
             if key in ngrams:
-                ngrams[key].occu_tot
-            ngram = Ngram(tmp, n_doc)
-            ngrams[key] = ngram
+                ngrams[key].occu_tot += 1
+                ngrams[key].docs.add(n_doc)
+            else:
+                ngram = Ngram(tmp, n_doc)
+                ngrams[key] = ngram
         tmp = []
     return ngrams
 
+"""
+Get the ngram with highest occurence.
+
+:param ngrams: the dictionnary of ngrams
+:type dict
+
+:return: the nb of ngram with highest occurence.
+:typer: int
+"""
 def get_max_occu(ngrams):
     res = None
     for k, i in ngrams.items():
@@ -67,27 +80,73 @@ def get_max_occu(ngrams):
             res = i
     return res.occu_tot
 
+"""
+Compute the TF-IDF of each ngram
+"""
 def compute_tfidf(ngrams, nb_doc):
     max_occu = get_max_occu(ngrams)
-    for k, item in ngrams:
+    for k in ngrams:
+        item = ngrams[k]
         tf = item.occu_tot / max_occu
-        idf = np.log(nb_doc / len(item.docs))
+        tmp = nb_doc / len(item.docs)
+        idf = np.log(tmp)
         item.tf_idf = tf * idf
+    return ngrams
+
+def compute_files(argv):
+    docs = argv['documents']
+    ngram_degree = argv['ngram_degree']
+    nb_doc = 0
+    ngrams = {}
+    for f in docs:
+        if not os.path.isfile(f):
+            continue
+        nb_doc += 1
+        text = convert_pdf_to_txt(f)
+        splited = re.findall(r"[\w']+", text)
+        ngrams = make_ngram(ngrams, splited, ngram_degree, nb_doc + 1)
+    return ngrams, nb_doc
+
+"""
+Sort the ngrams by the number of occurence.
+Return a list
+"""
+def sort_ngrams(ngrams):
+    list_ngrams = []
+    for k, item in ngrams:
+        list_ngrams.append(item)
+    res = sorted(list_ngrams, key=lambda ngram: ngrams.occu_tot)
+    return res
+
+"""
+Print the nb first ngrams.
+"""
+def print_ngrams(nb, ngrams):
+    for i in range(nb):
+        print(ngrams[i])
 
 def main(argv):
-    text = convert_pdf_to_txt("doc.pdf")
-    splited = re.findall(r"[\w']+", text)
-    ngrams = {}
-    ngrams = make_ngram(ngrams, splited, 2, 1)
-    for key, item in ngrams.items():
-        print(key)
+    if argv['ngram_degree'] == None:
+        argv['ngram_degree'] = 3
+    if argv['result'] == None:
+        argv['result'] = 10
+    ngrams, nb_doc = compute_files(argv)
+    if nb_doc == 0 or len(ngrams) == 0:
+        print("No documents found or those files are empty")
+        return
+    ngrams = compute_tfidf(ngrams, nb_doc)
+    ngrams_sorted = sort_ngrams(ngrams)
+    print_ngrams(argv['result'], ngrams_sorted)
+
+def defparser():
+    parser = argparse.ArgumentParser(description="Compute the firsts significants ngrams of the provided PDF documents")
+    parser.add_argument('-n', '--ngram-degree', metavar='deg', type=int, nargs='?', action='store', help="Degree of ngrams. Default is 3")
+    parser.add_argument('-r', '--result', metavar='res', type=int, nargs='?', action='store', help="Get the r first significant ngrams. Default is 10.")
+    parser.add_argument('documents', metavar='docs', type=str, nargs='+', action="store", default="", help="Documents to analyse")
+    return parser
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
-
-#ngram = Ngram(['toto'], 1)
-#dico = {}
-#dico[''.join(ngram.mot)] = ngram
-#for key, item in dico.items():
-#    print(key + " : ", item)
+    parser = defparser()
+    argv = vars(parser.parse_args())
+    main(argv)
