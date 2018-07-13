@@ -6,6 +6,7 @@ from io import StringIO
 import re
 import sys
 from ngram import Ngram
+from mycmd import myCmd
 import numpy as np
 import argparse
 import os.path
@@ -89,7 +90,7 @@ def compute_tfidf(ngrams, nb_doc):
         item = ngrams[k]
         tf = item.occu_tot / max_occu
         tmp = nb_doc / len(item.docs)
-        idf = np.log(tmp)
+        idf = np.log(tmp) + 1.0
         item.tf_idf = tf * idf
     return ngrams
 
@@ -103,6 +104,7 @@ def compute_files(argv):
             continue
         nb_doc += 1
         text = convert_pdf_to_txt(f)
+        text = text.lower()
         splited = re.findall(r"[\w']+", text)
         ngrams = make_ngram(ngrams, splited, ngram_degree, nb_doc + 1)
     return ngrams, nb_doc
@@ -119,26 +121,17 @@ def sort_ngrams(ngrams):
     res = sorted(list_ngrams, key=lambda ngram: ngram.tf_idf)
     return res
 
-"""
-Print the nb first ngrams.
-"""
-def print_ngrams(nb, ngrams):
-    print("The most significant ngrams are: ")
-    for i in range(nb):
-        print(' '.join(ngrams[i].mot))
 
-def main(argv):
+def compute_ngrams(argv):
     if argv['ngram_degree'] == None:
         argv['ngram_degree'] = 3
-    if argv['result'] == None:
-        argv['result'] = 10
     ngrams, nb_doc = compute_files(argv)
     if nb_doc == 0 or len(ngrams) == 0:
         print("No documents found or those files are empty")
         return
     ngrams = compute_tfidf(ngrams, nb_doc)
     ngrams_sorted = sort_ngrams(ngrams)
-    print_ngrams(argv['result'], ngrams_sorted)
+    return ngrams_sorted
 
 def defparser():
     parser = argparse.ArgumentParser(description="Compute the firsts significants ngrams of the provided PDF documents")
@@ -151,4 +144,5 @@ def defparser():
 if __name__ == "__main__":
     parser = defparser()
     argv = vars(parser.parse_args())
-    main(argv)
+    ngrams = compute_ngrams(argv)
+    myCmd(ngrams, argv['result']).cmdloop(intro="'write [word]' then <TAB> to get suggestions")
