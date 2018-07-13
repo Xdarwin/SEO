@@ -30,7 +30,7 @@ class myCmd(cmd.Cmd):
             print("\nThis is the best ngrams we can find:")
             for i in range(min_res):
                 tmp = ' '.join(res[i].mot)
-                print(tmp + " => score tf_idf: " + str(res[i].tf_idf))
+                print(tmp)
 #        return res 
 
 

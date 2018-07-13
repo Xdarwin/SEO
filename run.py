@@ -145,4 +145,4 @@ if __name__ == "__main__":
     parser = defparser()
     argv = vars(parser.parse_args())
     ngrams = compute_ngrams(argv)
-    myCmd(ngrams, argv['result']).cmdloop(intro="'write [word]' then <TAB> to get suggestions")
+    myCmd(ngrams, argv['result']).cmdloop(intro="'write [word]' then <ENTER> to get suggestions")
